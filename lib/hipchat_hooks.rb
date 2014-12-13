@@ -118,7 +118,7 @@ class NotificationHook < Redmine::Hook::Listener
 
     http = Net::HTTP.new("api.hipchat.com", 443)
     http.use_ssl = true
-    http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+    http.verify_mode = OpenSSL::SSL::VERIFY_PEER
     begin
       http.start do |connection|
         connection.request(req)
