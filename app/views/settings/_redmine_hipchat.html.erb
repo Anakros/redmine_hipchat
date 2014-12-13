@@ -1,4 +1,12 @@
 <p>
+  <%= content_tag(:label, l(:hipchat_settings_label_endpoint)) %>
+  <%= text_field_tag 'settings[endpoint]', @settings[:endpoint] %>
+  <em class="info">
+    Endpoint
+  </em>
+</p>
+
+<p>
   <%= content_tag(:label, l(:hipchat_settings_label_auth_token)) %>
   <%= text_field_tag 'settings[auth_token]', @settings[:auth_token] %>
   <em class="info">
@@ -21,7 +29,6 @@
     Notify room members? Will trigger sound/popup based on user preferences.
   </em>
 </p>
-
 
 <p>
   <%= content_tag(:label, l(:hipchat_settings_label_projects)) %>
