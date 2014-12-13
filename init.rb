@@ -3,7 +3,7 @@ Redmine::Plugin.register :redmine_hipchat do
   author 'HipChat, Inc.'
   description 'Sends notifications to a HipChat room.'
   version '2.0.0'
-  url 'https://github.com/hipchat/redmine_hipchat'
+  url 'https://github.com/Anakros/redmine_hipchat'
   author_url 'https://www.hipchat.com/'
 
   Rails.configuration.to_prepare do
