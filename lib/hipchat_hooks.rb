@@ -11,13 +11,7 @@ class NotificationHook < Redmine::Hook::Listener
     url     = get_url(issue)
     text    = "#{author} reported #{project.name} #{tracker} <a href=\"#{url}\">##{issue.id}</a>: #{subject}"
 
-    data          = {}
-    data[:text]   = text
-    data[:token]  = hipchat_auth_token(project)
-    data[:room]   = hipchat_room_name(project)
-    data[:notify] = hipchat_notify(project)
-
-    send_message(data)
+    build_message(project, text)
   end
 
   def controller_issues_edit_after_save(context = {})
@@ -33,13 +27,7 @@ class NotificationHook < Redmine::Hook::Listener
     text    = "#{author} updated #{project.name} #{tracker} <a href=\"#{url}\">##{issue.id}</a>: #{subject}"
     text   += ": <i>#{truncate(comment)}</i>" unless comment.blank?
 
-    data          = {}
-    data[:text]   = text
-    data[:token]  = hipchat_auth_token(project)
-    data[:room]   = hipchat_room_name(project)
-    data[:notify] = hipchat_notify(project)
-
-    send_message(data)
+    build_message(project, text)
   end
 
   def controller_wiki_edit_after_save(context = {})
@@ -53,19 +41,15 @@ class NotificationHook < Redmine::Hook::Listener
     url          = get_url(page)
     text         = "#{author} edited #{project_name} wiki page <a href=\"#{url}\">#{wiki}</a>"
 
-    data          = {}
-    data[:text]   = text
-    data[:token]  = hipchat_auth_token(project)
-    data[:room]   = hipchat_room_name(project)
-    data[:notify] = hipchat_notify(project)
-
-    send_message(data)
+    build_message(project, text)
   end
 
   private
 
   def hipchat_configured?(project)
-    if project.hipchat_room_name.length > 0
+    token_configured = !project.hipchat_auth_token.empty? or !Setting.plugin_redmine_hipchat[:auth_token].empty?
+
+    if project.hipchat_room_name.length > 0 and token_configured
       true
     elsif Setting.plugin_redmine_hipchat[:projects] and
           Setting.plugin_redmine_hipchat[:projects].include?(project.id.to_s) and
@@ -102,6 +86,16 @@ class NotificationHook < Redmine::Hook::Listener
     end
   end
 
+  def hipchat_from(project)
+    if !project.hipchat_from.empty?
+      project.hipchat_from
+    elsif !Setting.plugin_redmine_hipchat[:from].empty?
+      Setting.plugin_redmine_hipchat[:from]
+    else
+      'Redmine'
+    end
+  end
+
   def get_url(object)
     case object
       when Issue    then "#{Setting[:protocol]}://#{Setting[:host_name]}/issues/#{object.id}"
@@ -111,17 +105,21 @@ class NotificationHook < Redmine::Hook::Listener
     end
   end
 
-  def send_message(data)
-    Rails.logger.info "Hipchat: sending message to #{ data[:room] } room."
+  def build_message(project, text)
+    send_request({
+      auth_token: hipchat_auth_token(project),
+      room_id: hipchat_room_name(project),
+      notify: hipchat_notify(project) ? 1 : 0,
+      from: hipchat_from(project),
+      message: text
+    })
+  end
+
+  def send_request(data)
+    Rails.logger.info "Hipchat: sending message: #{ data.inspect }"
 
     req = Net::HTTP::Post.new("/v1/rooms/message")
-    req.set_form_data({
-      :auth_token => data[:token],
-      :room_id => data[:room],
-      :notify => data[:notify] ? 1 : 0,
-      :from => 'Redmine',
-      :message => data[:text]
-    })
+    req.set_form_data(data)
     req["Content-Type"] = 'application/x-www-form-urlencoded'
 
     endpoint = if Setting.plugin_redmine_hipchat[:endpoint].empty?
@@ -138,7 +136,7 @@ class NotificationHook < Redmine::Hook::Listener
       http.start do |connection|
         response = connection.request(req)
 
-        Rails.logger.info "Hipchat: response #{response.code}" unless response.code == '200'
+        Rails.logger.info "Hipchat: #{ response.code } response with '#{ response.msg }' message." unless response.code == '200'
       end
     rescue Net::HTTPBadResponse => e
       Rails.logger.error "Hipchat: Error hitting API: #{e}"

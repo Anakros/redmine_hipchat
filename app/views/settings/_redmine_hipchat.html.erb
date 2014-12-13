@@ -2,7 +2,7 @@
   <%= content_tag(:label, l(:hipchat_settings_label_endpoint)) %>
   <%= text_field_tag 'settings[endpoint]', @settings[:endpoint] %>
   <em class="info">
-    Endpoint
+    Endpoint domain
   </em>
 </p>
 
@@ -27,6 +27,14 @@
   <%= check_box_tag 'settings[notify]', 1, @settings[:notify] %>
   <em class="info">
     Notify room members? Will trigger sound/popup based on user preferences.
+  </em>
+</p>
+
+<p>
+  <%= content_tag(:label, l(:hipchat_settings_label_from)) %>
+  <%= text_field_tag 'settings[from]', @settings[:from] %>
+  <em class="info">
+    The sender name that will be displayed
   </em>
 </p>
 

@@ -5,6 +5,8 @@ en:
   hipchat_settings_label_notify: Notify
   hipchat_settings_label_projects: Projects
   hipchat_settings_label_endpoint: Endpoint
+  hipchat_settings_label_from: From
   field_hipchat_auth_token: HipChat Room token
   field_hipchat_room_name: HipChat Room ID
   field_hipchat_notify: HipChat notify
+  field_hipchat_from: HipChat From
