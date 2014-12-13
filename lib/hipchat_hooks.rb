@@ -67,7 +67,7 @@ class NotificationHook < Redmine::Hook::Listener
   private
 
   def hipchat_configured?(project)
-    if !project.hipchat_auth_token.empty? && !project.hipchat_room_name.empty?
+    if !project.hipchat_auth_token.empty? || !project.hipchat_room_name.empty?
       return true
     elsif Setting.plugin_redmine_hipchat[:projects] &&
           Setting.plugin_redmine_hipchat[:projects].include?(project.id.to_s) &&
