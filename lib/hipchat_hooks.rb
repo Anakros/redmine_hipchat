@@ -1,11 +1,9 @@
-# encoding: utf-8
-
 class NotificationHook < Redmine::Hook::Listener
 
   def controller_issues_new_after_save(context = {})
     issue   = context[:issue]
     project = issue.project
-    return true if !hipchat_configured?(project)
+    return true unless hipchat_configured?(project)
 
     author  = CGI::escapeHTML(User.current.name)
     tracker = CGI::escapeHTML(issue.tracker.name.downcase)
@@ -25,7 +23,7 @@ class NotificationHook < Redmine::Hook::Listener
   def controller_issues_edit_after_save(context = {})
     issue   = context[:issue]
     project = issue.project
-    return true if !hipchat_configured?(project)
+    return true unless hipchat_configured?(project)
 
     author  = CGI::escapeHTML(User.current.name)
     tracker = CGI::escapeHTML(issue.tracker.name.downcase)
@@ -47,7 +45,7 @@ class NotificationHook < Redmine::Hook::Listener
   def controller_wiki_edit_after_save(context = {})
     page    = context[:page]
     project = page.wiki.project
-    return true if !hipchat_configured?(project)
+    return true unless hipchat_configured?(project)
 
     author       = CGI::escapeHTML(User.current.name)
     wiki         = CGI::escapeHTML(page.pretty_title)
@@ -67,32 +65,41 @@ class NotificationHook < Redmine::Hook::Listener
   private
 
   def hipchat_configured?(project)
-    if !project.hipchat_auth_token.empty? || !project.hipchat_room_name.empty?
-      return true
-    elsif Setting.plugin_redmine_hipchat[:projects] &&
-          Setting.plugin_redmine_hipchat[:projects].include?(project.id.to_s) &&
-          Setting.plugin_redmine_hipchat[:auth_token] &&
+    if project.hipchat_room_name.length > 0
+      true
+    elsif Setting.plugin_redmine_hipchat[:projects] and
+          Setting.plugin_redmine_hipchat[:projects].include?(project.id.to_s) and
+          Setting.plugin_redmine_hipchat[:auth_token] and
           Setting.plugin_redmine_hipchat[:room_id]
-      return true
+      true
     else
-      Rails.logger.info "Not sending HipChat message - missing config"
+      Rails.logger.info "Hipchat: Not sending message, missing config."
+      false
     end
-    false
   end
 
   def hipchat_auth_token(project)
-    return project.hipchat_auth_token if !project.hipchat_auth_token.empty?
-    return Setting.plugin_redmine_hipchat[:auth_token]
+    if project.hipchat_auth_token.empty?
+      Setting.plugin_redmine_hipchat[:auth_token]
+    else
+      project.hipchat_auth_token
+    end
   end
 
   def hipchat_room_name(project)
-    return project.hipchat_room_name if !project.hipchat_room_name.empty?
-    return Setting.plugin_redmine_hipchat[:room_id]
+    if project.hipchat_room_name.empty?
+      Setting.plugin_redmine_hipchat[:room_id]
+    else
+      project.hipchat_room_name
+    end
   end
 
   def hipchat_notify(project)
-    return project.hipchat_notify if !project.hipchat_auth_token.empty? && !project.hipchat_room_name.empty?
-    Setting.plugin_redmine_hipchat[:notify]
+    if project.hipchat_room_name.empty?
+      Setting.plugin_redmine_hipchat[:notify]
+    else
+      project.hipchat_notify
+    end
   end
 
   def get_url(object)
@@ -100,12 +107,13 @@ class NotificationHook < Redmine::Hook::Listener
       when Issue    then "#{Setting[:protocol]}://#{Setting[:host_name]}/issues/#{object.id}"
       when WikiPage then "#{Setting[:protocol]}://#{Setting[:host_name]}/projects/#{object.wiki.project.identifier}/wiki/#{object.title}"
     else
-      Rails.logger.info "Asked redmine_hipchat for the url of an unsupported object #{object.inspect}"
+      Rails.logger.error "Hipchat: Asked for the url of an unsupported object #{object.inspect}"
     end
   end
 
   def send_message(data)
-    Rails.logger.info "Sending message to HipChat: #{data[:text]}"
+    Rails.logger.info "Hipchat: sending message to #{ data[:room] } room."
+
     req = Net::HTTP::Post.new("/v1/rooms/message")
     req.set_form_data({
       :auth_token => data[:token],
@@ -119,12 +127,15 @@ class NotificationHook < Redmine::Hook::Listener
     http = Net::HTTP.new("api.hipchat.com", 443)
     http.use_ssl = true
     http.verify_mode = OpenSSL::SSL::VERIFY_PEER
+
     begin
       http.start do |connection|
-        connection.request(req)
+        response = connection.request(req)
+
+        Rails.logger.info "Hipchat: response #{response.code}" unless response.code == '200'
       end
     rescue Net::HTTPBadResponse => e
-      Rails.logger.error "Error hitting HipChat API: #{e}"
+      Rails.logger.error "Hipchat: Error hitting API: #{e}"
     end
   end
 
