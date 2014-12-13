@@ -1,22 +1,35 @@
 <p>
   <%= content_tag(:label, l(:hipchat_settings_label_auth_token)) %>
   <%= text_field_tag 'settings[auth_token]', @settings[:auth_token] %>
-  A token from <a href="https://www.hipchat.com/group_admin/api" target="_blank">your API tokens page</a>.
+  <em class="info">
+    A token from <a href="https://www.hipchat.com/group_admin/api" target="_blank">your API tokens page</a>.
+  </em>
 </p>
 
 <p>
   <%= content_tag(:label, l(:hipchat_settings_label_room_id)) %>
   <%= text_field_tag 'settings[room_id]', @settings[:room_id] %>
-  Target room's ID or name.
+  <em class="info">
+    Target room's ID or name.
+  </em>
 </p>
 
 <p>
   <%= content_tag(:label, l(:hipchat_settings_label_notify)) %>
   <%= check_box_tag 'settings[notify]', 1, @settings[:notify] %>
-  Notify room members? Will trigger sound/popup based on user preferences.
+  <em class="info">
+    Notify room members? Will trigger sound/popup based on user preferences.
+  </em>
 </p>
+
 
 <p>
   <%= content_tag(:label, l(:hipchat_settings_label_projects)) %>
-  <%= select_tag 'settings[projects][]', project_tree_options_for_select(Project.active, :selected => Project.where(:id => @settings[:projects])), :multiple => true, :size => Project.active.size %>
+  <% if Project.count == 0 %>
+    <em class="info">
+      No projects
+    </em>
+  <% else %>
+    <%= select_tag 'settings[projects][]', project_tree_options_for_select(Project.active, :selected => Project.where(:id => @settings[:projects])), :multiple => true, :size => Project.active.size %>
+  <% end %>
 </p>
