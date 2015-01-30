@@ -106,22 +106,28 @@ class NotificationHook < Redmine::Hook::Listener
 
   def send_message(data)
     Rails.logger.info "Sending message to HipChat: #{data[:text]}"
-    req = Net::HTTP::Post.new("/v1/rooms/message")
+    req = Net::HTTP::Post.new("/v2/room/" + data[:room] +"/notification")
     req.set_form_data({
       :auth_token => data[:token],
-      :room_id => data[:room],
-      :notify => data[:notify] ? 1 : 0,
-      :from => 'Redmine',
-      :message => data[:text]
-    })
+      :color => 'yellow',
+      :message => data[:text],
+      :message_format => 'html'
+     })
     req["Content-Type"] = 'application/x-www-form-urlencoded'
-
+    
     http = Net::HTTP.new("api.hipchat.com", 443)
     http.use_ssl = true
     http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+    http.set_debug_output($stderr)
+    
     begin
+       Rails.logger.info "HTTP request: "
+      Rails.logger.info req.inspect
       http.start do |connection|
-        connection.request(req)
+        response = connection.request(req)
+        Rails.logger.info "HTTP response:"
+        Rails.logger.info response.inspect
+        Rails.logger.info response.body.inspect
       end
     rescue Net::HTTPBadResponse => e
       Rails.logger.error "Error hitting HipChat API: #{e}"
